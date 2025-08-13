@@ -50,7 +50,6 @@
           <thead>
             <tr>
               <th>Họ tên</th>
-              <th>Liên hệ</th>
               <th>Trạng thái</th>
               <th>Đi cùng</th>
               <th>Lời nhắn</th>
@@ -70,8 +69,6 @@
         <input type="hidden" id="guestId">
         <label>Họ tên</label>
         <input type="text" id="guestName" required>
-        <label>Số điện thoại</label>
-        <input type="text" id="guestPhone">
         <label>Trạng thái tham dự</label>
         <select id="guestAttending">
           <option value="true">Sẽ tham dự</option>
@@ -98,7 +95,6 @@
       const modalTitle = document.getElementById('modalTitle');
       const guestId = document.getElementById('guestId');
       const guestName = document.getElementById('guestName');
-      const guestPhone = document.getElementById('guestPhone');
       const guestAttending = document.getElementById('guestAttending');
       const guestCount = document.getElementById('guestCount');
       const guestMessage = document.getElementById('guestMessage');
@@ -124,7 +120,6 @@
           tbody.innerHTML += `
             <tr>
               <td><strong>${escapeHtml(g.name || '')}</strong></td>
-              <td>${escapeHtml(g.phone || '')}</td>
               <td>${g.attending ? 'Tham dự' : 'Không'}</td>
               <td>${g.guests ?? 0}</td>
               <td>${escapeHtml(g.message || '')}</td>
@@ -150,7 +145,6 @@
       document.getElementById('addGuestBtn').addEventListener('click', () => {
       guestId.value = '';
       guestName.value = '';
-      guestPhone.value = '';
       guestAttending.value = 'true';
       guestCount.value = 0;
       guestMessage.value = '';
@@ -167,7 +161,6 @@
       const g = await res.json();
       guestId.value = g._id;
       guestName.value = g.name;
-      guestPhone.value = g.phone;
       guestAttending.value = g.attending ? 'true' : 'false';
       guestCount.value = g.guests ?? 0;
       guestMessage.value = g.message;
@@ -179,7 +172,6 @@
   document.getElementById('saveGuestBtn').addEventListener('click', async () => {
     const guestData = {
       name: guestName.value.trim(),
-      phone: guestPhone.value.trim(),
       attending: guestAttending.value === 'true',
       guests: Number(guestCount.value),
       message: guestMessage.value.trim()
@@ -212,7 +204,6 @@
       tbody.innerHTML =
         `<tr>
           <td><strong>${escapeHtml(newGuest.name)}</strong></td>
-          <td>${escapeHtml(newGuest.phone || '')}</td>
           <td>${newGuest.attending ? 'Tham dự' : 'Không'}</td>
           <td>${newGuest.guests ?? 0}</td>
           <td>${escapeHtml(newGuest.message || '')}</td>
