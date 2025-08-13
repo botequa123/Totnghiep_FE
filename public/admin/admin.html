@@ -107,7 +107,7 @@
         const params = new URLSearchParams();
         if (searchEl.value.trim()) params.set('search', searchEl.value.trim());
         params.set('attending', attendingEl.value);
-        const res = await fetch('/api/guests?' + params.toString());
+        const res = await fetch('https://totnghiep-be.onrender.com/api/guests?' + params.toString());
         if (!res.ok) {
           tbody.innerHTML = '<tr><td colspan="7">Không thể tải dữ liệu</td></tr>';
           return;
@@ -163,7 +163,7 @@
       });
 
       async function openEditModal(id) {
-      const res = await fetch('/api/guests/' + id); // cần API GET /api/guests/:id ở server
+      const res = await fetch('https://totnghiep-be.onrender.com/api/guests/' + id); // cần API GET /api/guests/:id ở server
       const g = await res.json();
       guestId.value = g._id;
       guestName.value = g.name;
@@ -185,7 +185,7 @@
       message: guestMessage.value.trim()
     };
 
-    let url = '/api/rsvp';
+    let url = 'https://totnghiep-be.onrender.com/api/rsvp';
     let method = 'POST';
 
     if (guestId.value) {
@@ -233,7 +233,7 @@
   // Xóa khách mời
   async function deleteGuest(id) {
     if (!confirm('Bạn có chắc muốn xóa khách mời này?')) return;
-    await fetch('/api/rsvp/' + id, { method: 'DELETE' });
+    await fetch('https://totnghiep-be.onrender.com/api/rsvp/' + id, { method: 'DELETE' });
     fetchGuests();
   }
 
