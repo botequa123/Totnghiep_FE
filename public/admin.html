@@ -1,0 +1,254 @@
+  <!doctype html>
+  <html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản trị RSVP</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      .action-btn { cursor: pointer; padding: 5px 10px; border: none; border-radius: 4px; }
+      .edit-btn { background: #4caf50; color: white; }
+      .delete-btn { background: #f44336; color: white; }
+      .modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+      }
+      .modal-content {
+        background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 100%;
+      }
+      .modal-content input, .modal-content select, .modal-content textarea {
+        width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px;
+      }
+      .close-btn { background: gray; color: white; }
+    </style>
+  </head>
+  <body>
+    <div class="container-narrow">
+      <div class="card">
+        <h1>Danh sách khách mời</h1>
+        <button id="addGuestBtn" class="action-btn edit-btn">+ Thêm khách mời</button>
+        <div class="grid grid-2" style="margin-top:10px;">
+          <div>
+            <label for="search">Tìm kiếm</label>
+            <input id="search" placeholder="Tên, SĐT, lời nhắn...">
+          </div>
+          <div>
+            <label for="attending">Trạng thái tham dự</label>
+            <select id="attending">
+              <option value="all">Tất cả</option>
+              <option value="yes">Sẽ tham dự</option>
+              <option value="no">Không tham dự</option>
+            </select>
+          </div>
+        </div>
+        <div class="chips" style="margin-top:10px;">
+          <span class="chip" id="totalChip">Tổng: 0</span>
+          <span class="chip" id="yesChip">Sẽ tham dự: 0</span>
+          <span class="chip" id="noChip">Không tham dự: 0</span>
+        </div>
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Họ tên</th>
+              <th>Liên hệ</th>
+              <th>Trạng thái</th>
+              <th>Đi cùng</th>
+              <th>Lời nhắn</th>
+              <th>Thời gian</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div id="guestModal" class="modal">
+      <div class="modal-content">
+        <h3 id="modalTitle">Thêm khách mời</h3>
+        <input type="hidden" id="guestId">
+        <label>Họ tên</label>
+        <input type="text" id="guestName" required>
+        <label>Số điện thoại</label>
+        <input type="text" id="guestPhone">
+        <label>Trạng thái tham dự</label>
+        <select id="guestAttending">
+          <option value="true">Sẽ tham dự</option>
+          <option value="false">Không</option>
+        </select>
+        <label>Số người đi cùng</label>
+        <input type="number" id="guestCount" value="0" min="0">
+        <label>Lời nhắn</label>
+        <textarea id="guestMessage"></textarea>
+        <button id="saveGuestBtn" class="action-btn edit-btn">Lưu</button>
+        <button id="closeModalBtn" class="action-btn close-btn">Đóng</button>
+      </div>
+    </div>
+
+    <script>
+      const tbody = document.getElementById('tbody');
+      const searchEl = document.getElementById('search');
+      const attendingEl = document.getElementById('attending');
+      const totalChip = document.getElementById('totalChip');
+      const yesChip = document.getElementById('yesChip');
+      const noChip = document.getElementById('noChip');
+
+      const guestModal = document.getElementById('guestModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const guestId = document.getElementById('guestId');
+      const guestName = document.getElementById('guestName');
+      const guestPhone = document.getElementById('guestPhone');
+      const guestAttending = document.getElementById('guestAttending');
+      const guestCount = document.getElementById('guestCount');
+      const guestMessage = document.getElementById('guestMessage');
+
+      async function fetchGuests() {
+        const params = new URLSearchParams();
+        if (searchEl.value.trim()) params.set('search', searchEl.value.trim());
+        params.set('attending', attendingEl.value);
+        const res = await fetch('/api/guests?' + params.toString());
+        if (!res.ok) {
+          tbody.innerHTML = '<tr><td colspan="7">Không thể tải dữ liệu</td></tr>';
+          return;
+        }
+        const data = await res.json();
+        renderRows(data.items || []);
+      }
+
+      function renderRows(items) {
+        tbody.innerHTML = '';
+        let yes = 0, no = 0;
+        for (const g of items) {
+          if (g.attending) yes++; else no++;
+          tbody.innerHTML += `
+            <tr>
+              <td><strong>${escapeHtml(g.name || '')}</strong></td>
+              <td>${escapeHtml(g.phone || '')}</td>
+              <td>${g.attending ? 'Tham dự' : 'Không'}</td>
+              <td>${g.guests ?? 0}</td>
+              <td>${escapeHtml(g.message || '')}</td>
+              <td>${new Date(g.createdAt).toLocaleString()}</td>
+              <td>
+                <button class="action-btn edit-btn" onclick="openEditModal('${g._id}')">Sửa</button>
+                <button class="action-btn delete-btn" onclick="deleteGuest('${g._id}')">Xóa</button>
+              </td>
+            </tr>`;
+        }
+        totalChip.textContent = `Tổng: ${items.length}`;
+        yesChip.textContent = `Sẽ tham dự: ${yes}`;
+        noChip.textContent = `Không tham dự: ${no}`;
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, s => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        })[s]);
+      }
+
+      // CRUD Functions
+      document.getElementById('addGuestBtn').addEventListener('click', () => {
+      guestId.value = '';
+      guestName.value = '';
+      guestPhone.value = '';
+      guestAttending.value = 'true';
+      guestCount.value = 0;
+      guestMessage.value = '';
+      modalTitle.textContent = 'Thêm khách mời';
+      guestModal.style.display = 'flex';
+    });
+
+      document.getElementById('closeModalBtn').addEventListener('click', () => {
+        guestModal.style.display = 'none';
+      });
+
+      async function openEditModal(id) {
+      const res = await fetch('/api/guests/' + id); // cần API GET /api/guests/:id ở server
+      const g = await res.json();
+      guestId.value = g._id;
+      guestName.value = g.name;
+      guestPhone.value = g.phone;
+      guestAttending.value = g.attending ? 'true' : 'false';
+      guestCount.value = g.guests ?? 0;
+      guestMessage.value = g.message;
+      modalTitle.textContent = 'Sửa khách mời';
+      guestModal.style.display = 'flex';
+    }
+
+      // Lưu khách mời
+  document.getElementById('saveGuestBtn').addEventListener('click', async () => {
+    const guestData = {
+      name: guestName.value.trim(),
+      phone: guestPhone.value.trim(),
+      attending: guestAttending.value === 'true',
+      guests: Number(guestCount.value),
+      message: guestMessage.value.trim()
+    };
+
+    let url = '/api/rsvp';
+    let method = 'POST';
+
+    if (guestId.value) {
+      url = '/api/rsvp/' + guestId.value;
+      method = 'PUT';
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(guestData)
+    });
+
+    if (!res.ok) {
+      alert('Lỗi khi lưu khách mời');
+      return;
+    }
+
+    // Nếu thêm mới, nhận khách vừa tạo và thêm vào bảng ngay
+    if (method === 'POST') {
+      const newGuest = await res.json();
+      // Thêm vào bảng DOM luôn
+      const currentRows = tbody.innerHTML;
+      tbody.innerHTML =
+        `<tr>
+          <td><strong>${escapeHtml(newGuest.name)}</strong></td>
+          <td>${escapeHtml(newGuest.phone || '')}</td>
+          <td>${newGuest.attending ? 'Tham dự' : 'Không'}</td>
+          <td>${newGuest.guests ?? 0}</td>
+          <td>${escapeHtml(newGuest.message || '')}</td>
+          <td>${new Date(newGuest.createdAt).toLocaleString()}</td>
+          <td>
+            <button class="action-btn edit-btn" onclick="openEditModal('${newGuest._id}')">Sửa</button>
+            <button class="action-btn delete-btn" onclick="deleteGuest('${newGuest._id}')">Xóa</button>
+          </td>
+        </tr>` + currentRows;
+    } else {
+      // Nếu sửa, reload bảng
+      fetchGuests();
+    }
+
+    guestModal.style.display = 'none';
+  });
+
+  // Xóa khách mời
+  async function deleteGuest(id) {
+    if (!confirm('Bạn có chắc muốn xóa khách mời này?')) return;
+    await fetch('/api/rsvp/' + id, { method: 'DELETE' });
+    fetchGuests();
+  }
+
+  // Escape HTML
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, s => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    })[s]);
+  }
+
+  // Tìm kiếm & lọc
+  searchEl.addEventListener('input', fetchGuests);
+  attendingEl.addEventListener('change', fetchGuests);
+
+  fetchGuests();
+</script>
+  </body>
+  </html>
