@@ -104,11 +104,12 @@
         message: form.message.value.trim()
       };
       try {
-        const res = await fetch('https://totnghiep-be.onrender.com/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
+        const res = await fetch('https://totnghiep-be.onrender.com/api/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
         if (!res.ok) throw new Error('Có lỗi xảy ra');
         form.reset();
         Swal.fire({ icon: 'success', title: 'Cảm ơn bạn!', text: 'Phản hồi đã được ghi nhận.' });
